@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小红书图片原创度增强工具 Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF9A9E 0%, #FAD0C4 50%, #FFD1FF 100%);
+            color: #333;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .content {
+            padding: 50px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #FF6B9D;
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #FF6B9D;
+        }
+
+        .theme-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .theme-card {
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+            text-align: center;
+        }
+
+        .theme-card:hover {
+            border-color: #FF6B9D;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.3);
+        }
+
+        .theme-card.active {
+            border-color: #FF6B9D;
+            background: linear-gradient(135deg, #fff0f5 0%, #ffe8f0 100%);
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.4);
+        }
+
+        .theme-card h3 {
+            color: #FF6B9D;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .theme-card p {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .theme-preview {
+            width: 100%;
+            height: 120px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone {
+            border: 3px dashed #FF6B9D;
+            border-radius: 15px;
+            padding: 60px;
+            text-align: center;
+            background: #fff0f5;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 25px 0;
+        }
+
+        .upload-zone:hover {
+            background: #ffe8f0;
+            border-color: #FF1493;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .image-item {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 12px;
+            background: #fafafa;
+            position: relative;
+        }
+
+        .image-item img {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .config-panel {
+            background: #fff0f5;
+            border: 2px solid #FF6B9D;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .config-item {
+            margin-bottom: 20px;
+        }
+
+        .config-item label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .config-item input[type="number"],
+        .config-item input[type="text"],
+        .config-item select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .text-sticker-builder {
+            background: white;
+            border: 2px solid #FF6B9D;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .sticker-preset-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .sticker-preset {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .sticker-preset:hover {
+            border-color: #FF6B9D;
+            background: #fff0f5;
+            transform: scale(1.05);
+        }
+
+        .sticker-preset.selected {
+            background: #FF6B9D;
+            color: white;
+            border-color: #FF6B9D;
+        }
+
+        button {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #FF6B9D 0%, #FF1493 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 8px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 157, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 25px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 25px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FF6B9D 0%, #FF1493 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 5px solid #4A90E2;
+            padding: 20px 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+
+        .status-message {
+            padding: 18px 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+
+        .result-panel {
+            background: #f8f9fa;
+            border: 2px solid #28a745;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+
+        .md5-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .md5-table th,
+        .md5-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .md5-table th {
+            background: #FF6B9D;
+            color: white;
+            font-weight: 600;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .custom-sticker-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .color-option:hover {
+            transform: scale(1.15);
+        }
+
+        .color-option.selected {
+            border-color: #333;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 小红书图片原创度增强工具 Pro</h1>
+            <p>手绘风格边框 + 教育场景化贴纸 = 爆款笔记风格<br>
+            让每张图片都像精心设计的手帐,大幅提升原创度和点击率!</p>
+        </div>
+
+        <div class="content">
+            <!-- 主题选择 -->
+            <div class="section">
+                <h2>🎯 第一步: 选择主题风格 (一键应用完整风格)</h2>
+
+                <div class="theme-selector">
+                    <div class="theme-card active" id="theme1" onclick="selectTheme('fresh')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #FFE5EC 0%, #FFF0F5 100%); border: 3px dashed #FFB6C1;">
+                            <div style="position: absolute; top: 5px; left: 10px; background: #FFB6C1; color: white; padding: 3px 10px; border-radius: 10px; font-size: 12px;">DAY 1</div>
+                            <span>⭐ ✨ 💖</span>
+                        </div>
+                        <h3>清新手帐风</h3>
+                        <p>波浪边框+小花星星<br>粉蓝黄配色</p>
+                    </div>
+
+                    <div class="theme-card" id="theme2" onclick="selectTheme('notebook')">
+                        <div class="theme-preview" style="background: #FFF8DC; border-left: 10px solid #DEB887;">
+                            <div style="position: absolute; top: 5px; left: 15px; background: #8B4513; color: white; padding: 3px 8px; border-radius: 5px; font-size: 12px;">📝</div>
+                            <span>笔记本风格</span>
+                        </div>
+                        <h3>笔记本风格</h3>
+                        <p>螺旋本边框+DAY标签<br>铅笔对勾</p>
+                    </div>
+
+                    <div class="theme-card" id="theme3" onclick="selectTheme('motivational')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF69B4 100%);">
+                            <div style="position: absolute; top: 8px; right: 8px; font-size: 24px;">🏆</div>
+                            <span style="color: white; font-weight: 700;">你真棒!</span>
+                        </div>
+                        <h3>激励打卡风</h3>
+                        <p>彩虹边框+激励文字<br>奖杯打卡</p>
+                    </div>
+
+                    <div class="theme-card" id="theme4" onclick="selectTheme('serious')">
+                        <div class="theme-preview" style="background: white; border: 2px solid #333;">
+                            <div style="position: absolute; top: 5px; left: 10px; background: #FF6B6B; color: white; padding: 3px 10px; border-radius: 3px; font-size: 12px;">重点</div>
+                            <span style="color: #333;">严肃学习</span>
+                        </div>
+                        <h3>严肃学习风</h3>
+                        <p>直线边框+重点标签<br>箭头序号</p>
+                    </div>
+
+                    <div class="theme-card" id="theme5" onclick="selectTheme('cute')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #FFB6D9 0%, #C1E1FF 100%); border-radius: 20px;">
+                            <div style="position: absolute; top: 5px; left: 5px; font-size: 20px;">💖</div>
+                            <div style="position: absolute; bottom: 5px; right: 5px; font-size: 20px;">🌸</div>
+                            <span>可爱卡通</span>
+                        </div>
+                        <h3>可爱卡通风</h3>
+                        <p>爱心边框+可爱文字<br>马卡龙色</p>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4 style="color: #4A90E2; margin-bottom: 10px;">💡 当前主题: <span id="currentThemeName">清新手帐风</span></h4>
+                    <p style="color: #666; line-height: 1.6;">选择主题后,边框、贴纸、颜色将自动配置为最佳组合。您也可以在下方自定义调整。</p>
+                </div>
+            </div>
+
+            <!-- 上传图片 -->
+            <div class="section">
+                <h2>📤 第二步: 上传图片</h2>
+
+                <div class="upload-zone" id="uploadZone">
+                    <p style="font-size: 48px; margin-bottom: 20px;">🖼️</p>
+                    <p style="font-size: 24px; color: #FF6B9D; margin-bottom: 20px;">拖拽图片到这里</p>
+                    <p style="color: #666; margin-bottom: 25px;">或者</p>
+                    <label for="imageInput" style="display: inline-block; padding: 15px 40px; background: #FF6B9D; color: white; border-radius: 10px; cursor: pointer; font-size: 16px;">
+                        点击选择图片
+                    </label>
+                    <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                    <p style="color: #999; font-size: 14px; margin-top: 20px;">支持JPG、PNG格式,建议每组1-20张</p>
+                </div>
+
+                <div class="image-grid" id="imageGrid"></div>
+
+                <div class="btn-group" id="uploadButtons" style="display: none;">
+                    <button id="clearAll" style="background: #dc3545;">清空所有图片</button>
+                </div>
+
+                <div class="status-message" id="uploadStatus"></div>
+            </div>
+
+            <!-- 装饰配置 -->
+            <div class="section">
+                <h2>🎨 第三步: 自定义装饰 (可选)</h2>
+
+                <div class="config-panel">
+                    <h3 style="color: #FF6B9D; margin-bottom: 20px;">边框设置</h3>
+
+                    <div class="config-row">
+                        <div class="config-item">
+                            <label>边框样式:</label>
+                            <select id="borderStyle">
+                                <option value="wavy">手绘波浪边框 (推荐)</option>
+                                <option value="dashed">虚线边框</option>
+                                <option value="decorated">装饰边框 (四角爱心)</option>
+                                <option value="notebook">笔记本风格</option>
+                                <option value="solid">纯色边框</option>
+                                <option value="gradient">渐变边框</option>
+                            </select>
+                        </div>
+
+                        <div class="config-item">
+                            <label>边框宽度:</label>
+                            <input type="number" id="borderWidth" min="15" max="60" value="25">
+                        </div>
+
+                        <div class="config-item">
+                            <label>圆角大小:</label>
+                            <input type="number" id="borderRadius" min="0" max="40" value="15">
+                        </div>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+                    <h3 style="color: #FF6B9D; margin-bottom: 20px;">文字贴纸 (中文激励/学科标签)</h3>
+
+                    <div class="text-sticker-builder">
+                        <label style="font-weight: 600; margin-bottom: 10px; display: block;">快速选择预设贴纸:</label>
+
+                        <h4 style="margin: 15px 0 10px; color: #666; font-size: 14px;">激励类:</h4>
+                        <div class="sticker-preset-grid">
+                            <div class="sticker-preset" onclick="toggleSticker(this, '加油')" style="background: #FFD700;">加油</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '努力')" style="background: #FFA500;">努力</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '你真棒!')" style="background: #FF69B4;">你真棒!</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '太厉害了!')" style="background: #FF1493;">太厉害了!</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '能量满满')" style="background: #FFB6C1;">能量满满</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '继续加油')" style="background: #FFC0CB;">继续加油</div>
+                        </div>
+
+                        <h4 style="margin: 15px 0 10px; color: #666; font-size: 14px;">学科类:</h4>
+                        <div class="sticker-preset-grid">
+                            <div class="sticker-preset" onclick="toggleSticker(this, '数学小天才')" style="background: #87CEEB;">数学小天才</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '语文小达人')" style="background: #98FB98;">语文小达人</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '英语单词王')" style="background: #DDA0DD;">英语单词王</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '计算小能手')" style="background: #F0E68C;">计算小能手</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '阅读之星')" style="background: #E0BBE4;">阅读之星</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '学霸养成记')" style="background: #FFDAB9;">学霸养成记</div>
+                        </div>
+
+                        <h4 style="margin: 15px 0 10px; color: #666; font-size: 14px;">状态标签:</h4>
+                        <div class="sticker-preset-grid">
+                            <div class="sticker-preset" onclick="toggleSticker(this, '重点')" style="background: #FF6B6B;">重点</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '难点')" style="background: #FFA07A;">难点</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '易错')" style="background: #FFD700;">易错</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '已掌握✓')" style="background: #90EE90;">已掌握✓</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '待复习')" style="background: #ADD8E6;">待复习</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, '今日目标')" style="background: #FFB6D9;">今日目标</div>
+                        </div>
+
+                        <h4 style="margin: 15px 0 10px; color: #666; font-size: 14px;">DAY标签:</h4>
+                        <div class="sticker-preset-grid">
+                            <div class="sticker-preset" onclick="toggleSticker(this, 'DAY 1')" style="background: #C1E1FF;">DAY 1</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, 'DAY 2')" style="background: #C1E1FF;">DAY 2</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, 'DAY 3')" style="background: #C1E1FF;">DAY 3</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, 'DAY 7')" style="background: #C1E1FF;">DAY 7</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, 'DAY 14')" style="background: #C1E1FF;">DAY 14</div>
+                            <div class="sticker-preset" onclick="toggleSticker(this, 'DAY 30')" style="background: #C1E1FF;">DAY 30</div>
+                        </div>
+
+                        <div class="custom-sticker-input">
+                            <input type="text" id="customStickerText" placeholder="输入自定义文字贴纸" style="flex: 1;">
+                            <select id="customStickerBg" style="width: 150px;">
+                                <option value="#FFB6C1">粉色背景</option>
+                                <option value="#FFD700">黄色背景</option>
+                                <option value="#87CEEB">蓝色背景</option>
+                                <option value="#98FB98">绿色背景</option>
+                                <option value="#DDA0DD">紫色背景</option>
+                                <option value="#FFA07A">橙色背景</option>
+                            </select>
+                            <button onclick="addCustomSticker()" style="padding: 10px 25px;">添加</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 10px; border: 2px solid #ddd;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 10px;">已选择的贴纸:</label>
+                        <div id="selectedStickers" style="display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px;">
+                            <span style="color: #999;">未选择贴纸</span>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+                    <h3 style="color: #FF6B9D; margin-bottom: 20px;">手绘装饰元素</h3>
+
+                    <div class="config-row">
+                        <div class="config-item">
+                            <label>
+                                <input type="checkbox" id="enableArrows" checked style="margin-right: 10px;">
+                                添加手绘箭头
+                            </label>
+                        </div>
+
+                        <div class="config-item">
+                            <label>
+                                <input type="checkbox" id="enableCircles" checked style="margin-right: 10px;">
+                                添加圆圈标注
+                            </label>
+                        </div>
+
+                        <div class="config-item">
+                            <label>
+                                <input type="checkbox" id="enableEmojis" checked style="margin-right: 10px;">
+                                添加表情装饰 (⭐💖✨)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 技术参数 -->
+            <div class="section">
+                <h2>⚙️ 第四步: 配置生成参数</h2>
+
+                <div class="config-panel">
+                    <div class="config-row">
+                        <div class="config-item">
+                            <label>生成版本数量:</label>
+                            <input type="number" id="versionCount" min="1" max="15" value="5">
+                            <p style="color: #666; font-size: 13px; margin-top: 5px;">每个版本将使用不同的装饰组合</p>
+                        </div>
+
+                        <div class="config-item">
+                            <label>技术去重强度:</label>
+                            <select id="strengthLevel">
+                                <option value="light">轻度</option>
+                                <option value="medium" selected>中度 (推荐)</option>
+                                <option value="heavy">重度</option>
+                            </select>
+                        </div>
+
+                        <div class="config-item">
+                            <label>
+                                <input type="checkbox" id="enableTechDedup" checked style="margin-right: 10px;">
+                                启用技术去重 (MD5/像素/元数据)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button id="generateBtn" style="font-size: 19px; padding: 18px 50px;">🚀 开始生成装饰版本</button>
+                </div>
+
+                <div class="status-message" id="configStatus"></div>
+            </div>
+
+            <!-- 生成进度 -->
+            <div class="section" id="progressSection" style="display: none;">
+                <h2>⏳ 正在生成...</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar">0%</div>
+                </div>
+                <div class="status-message" id="progressStatus"></div>
+            </div>
+
+            <!-- 结果展示 -->
+            <div class="section" id="resultSection" style="display: none;">
+                <h2>✅ 生成完成</h2>
+
+                <div class="result-panel">
+                    <h3 style="color: #28a745;">📊 MD5值验证</h3>
+                    <p style="color: #666; margin-bottom: 15px;">每张图片的不同版本都有不同的MD5值</p>
+                    <div id="md5Container"></div>
+                </div>
+
+                <div class="info-box" style="background: #d4edda; border-left-color: #28a745;">
+                    <h4 style="color: #28a745;">🎉 所有版本已生成!</h4>
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li>已生成 <span id="totalVersions" class="highlight">0</span> 个版本</li>
+                        <li>每个版本包含 <span id="totalImages" class="highlight">0</span> 张图片</li>
+                        <li>每个版本使用不同的边框样式和贴纸组合</li>
+                        <li>所有版本已按文件夹打包</li>
+                    </ul>
+                </div>
+
+                <div class="btn-group">
+                    <button id="downloadBtn" style="background: #28a745; font-size: 19px; padding: 18px 50px;">
+                        📦 下载所有版本 (ZIP)
+                    </button>
+                    <button id="restartBtn" style="background: #6c757d;">
+                        🔄 重新开始
+                    </button>
+                </div>
+
+                <div class="status-message" id="resultStatus"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('=== 小红书图片去重工具 Pro ===');
+
+        // 全局变量
+        let uploadedImages = [];
+        let processedVersions = [];
+        let md5Records = [];
+        let selectedStickers = [];
+        let currentTheme = 'fresh';
+
+        // 主题配置
+        const themeConfigs = {
+            fresh: {
+                name: '清新手帐风',
+                borderStyle: 'wavy',
+                borderColors: ['#FFB6C1', '#FFC0CB', '#E6E6FA'],
+                stickers: ['加油', 'DAY 1', '你真棒!'],
+                emojis: ['⭐', '✨', '💖', '🌸'],
+                enableArrows: true,
+                enableCircles: true
+            },
+            notebook: {
+                name: '笔记本风格',
+                borderStyle: 'notebook',
+                borderColors: ['#DEB887', '#D2B48C'],
+                stickers: ['DAY 1', '重点', '已掌握✓'],
+                emojis: ['📝', '✓', '✏️'],
+                enableArrows: true,
+                enableCircles: false
+            },
+            motivational: {
+                name: '激励打卡风',
+                borderStyle: 'gradient',
+                borderColors: ['#FFD700', '#FFA500', '#FF69B4'],
+                stickers: ['你真棒!', '太厉害了!', '能量满满'],
+                emojis: ['🏆', '🎯', '💯', '🌟'],
+                enableArrows: false,
+                enableCircles: true
+            },
+            serious: {
+                name: '严肃学习风',
+                borderStyle: 'solid',
+                borderColors: ['#333333', '#666666'],
+                stickers: ['重点', '难点', '易错'],
+                emojis: [],
+                enableArrows: true,
+                enableCircles: true
+            },
+            cute: {
+                name: '可爱卡通风',
+                borderStyle: 'decorated',
+                borderColors: ['#FFB6D9', '#C1E1FF', '#FFE5EC'],
+                stickers: ['加油', '你真棒!', 'DAY 1'],
+                emojis: ['💖', '🌸', '🎀', '🌈'],
+                enableArrows: false,
+                enableCircles: false
+            }
+        };
+
+        // 页面加载
+        window.addEventListener('load', function() {
+            console.log('=== 页面加载完成 ===');
+            initializeUpload();
+            initializeGenerate();
+            initializeDownload();
+            applyTheme('fresh');
+        });
+
+        // 选择主题
+        function selectTheme(theme) {
+            currentTheme = theme;
+
+            // 更新UI
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.classList.remove('active');
+            });
+
+            const themeMap = {
+                'fresh': 'theme1',
+                'notebook': 'theme2',
+                'motivational': 'theme3',
+                'serious': 'theme4',
+                'cute': 'theme5'
+            };
+
+            document.getElementById(themeMap[theme]).classList.add('active');
+            document.getElementById('currentThemeName').textContent = themeConfigs[theme].name;
+
+            applyTheme(theme);
+        }
+
+        // 应用主题配置
+        function applyTheme(theme) {
+            const config = themeConfigs[theme];
+
+            // 应用边框样式
+            document.getElementById('borderStyle').value = config.borderStyle;
+
+            // 应用贴纸
+            selectedStickers = [...config.stickers];
+            updateSelectedStickersDisplay();
+
+            // 应用装饰元素
+            document.getElementById('enableArrows').checked = config.enableArrows;
+            document.getElementById('enableCircles').checked = config.enableCircles;
+            document.getElementById('enableEmojis').checked = true;
+        }
+
+        // 切换贴纸选择
+        function toggleSticker(element, text) {
+            const index = selectedStickers.indexOf(text);
+
+            if (index === -1) {
+                selectedStickers.push(text);
+                element.classList.add('selected');
+            } else {
+                selectedStickers.splice(index, 1);
+                element.classList.remove('selected');
+            }
+
+            updateSelectedStickersDisplay();
+        }
+
+        // 添加自定义贴纸
+        function addCustomSticker() {
+            const text = document.getElementById('customStickerText').value.trim();
+            const bg = document.getElementById('customStickerBg').value;
+
+            if (!text) {
+                alert('请输入文字内容');
+                return;
+            }
+
+            if (selectedStickers.length >= 10) {
+                alert('最多选择10个贴纸');
+                return;
+            }
+
+            selectedStickers.push(text);
+            updateSelectedStickersDisplay();
+
+            document.getElementById('customStickerText').value = '';
+        }
+
+        // 更新已选贴纸显示
+        function updateSelectedStickersDisplay() {
+            const container = document.getElementById('selectedStickers');
+
+            if (selectedStickers.length === 0) {
+                container.innerHTML = '<span style="color: #999;">未选择贴纸</span>';
+                return;
+            }
+
+            container.innerHTML = selectedStickers.map((text, index) => `
+                <div style="background: #FF6B9D; color: white; padding: 5px 15px; border-radius: 15px; display: flex; align-items: center; gap: 10px;">
+                    <span>${text}</span>
+                    <button onclick="removeSticker(${index})" style="background: transparent; border: none; color: white; cursor: pointer; padding: 0; margin: 0; font-size: 18px; font-weight: bold;">×</button>
+                </div>
+            `).join('');
+        }
+
+        // 移除贴纸
+        function removeSticker(index) {
+            selectedStickers.splice(index, 1);
+            updateSelectedStickersDisplay();
+
+            // 更新预设贴纸的选中状态
+            document.querySelectorAll('.sticker-preset').forEach(el => {
+                const text = el.textContent;
+                if (!selectedStickers.includes(text)) {
+                    el.classList.remove('selected');
+                }
+            });
+        }
+
+        // 初始化上传
+        function initializeUpload() {
+            const uploadZone = document.getElementById('uploadZone');
+            const imageInput = document.getElementById('imageInput');
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.style.borderColor = '#FF1493';
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.style.borderColor = '#FF6B9D';
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.style.borderColor = '#FF6B9D';
+                handleFiles(e.dataTransfer.files);
+            });
+
+            imageInput.addEventListener('change', function() {
+                handleFiles(this.files);
+            });
+
+            document.getElementById('clearAll').addEventListener('click', () => {
+                uploadedImages = [];
+                document.getElementById('imageGrid').innerHTML = '';
+                document.getElementById('uploadButtons').style.display = 'none';
+                showStatus('uploadStatus', '', '');
+            });
+        }
+
+        // 处理文件上传
+        function handleFiles(files) {
+            if (files.length > 20) {
+                showStatus('uploadStatus', '最多支持20张图片', 'error');
+                return;
+            }
+
+            Array.from(files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImages.push({
+                        name: file.name,
+                        dataUrl: e.target.result,
+                        file: file
+                    });
+                    displayImages();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 显示图片
+        function displayImages() {
+            const grid = document.getElementById('imageGrid');
+            grid.innerHTML = '';
+
+            uploadedImages.forEach((img, index) => {
+                const item = document.createElement('div');
+                item.className = 'image-item';
+                item.innerHTML = `
+                    <img src="${img.dataUrl}">
+                    <button onclick="removeImage(${index})" style="position: absolute; top: 18px; right: 18px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 20px;">×</button>
+                    <div style="margin-top: 10px; font-size: 13px; color: #666; text-align: center; word-break: break-all;">${img.name}</div>
+                `;
+                grid.appendChild(item);
+            });
+
+            document.getElementById('uploadButtons').style.display = uploadedImages.length > 0 ? 'flex' : 'none';
+            showStatus('uploadStatus', `✅ 已上传 ${uploadedImages.length} 张图片`, 'success');
+        }
+
+        // 删除图片
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            displayImages();
+        }
+
+        // 初始化生成
+        function initializeGenerate() {
+            document.getElementById('generateBtn').addEventListener('click', generateVersions);
+        }
+
+        // 生成版本
+        async function generateVersions() {
+            if (uploadedImages.length === 0) {
+                showStatus('configStatus', '请先上传图片', 'error');
+                return;
+            }
+
+            const versionCount = parseInt(document.getElementById('versionCount').value) || 5;
+            const borderStyle = document.getElementById('borderStyle').value;
+            const borderWidth = parseInt(document.getElementById('borderWidth').value) || 25;
+            const borderRadius = parseInt(document.getElementById('borderRadius').value) || 15;
+            const enableArrows = document.getElementById('enableArrows').checked;
+            const enableCircles = document.getElementById('enableCircles').checked;
+            const enableEmojis = document.getElementById('enableEmojis').checked;
+            const enableTechDedup = document.getElementById('enableTechDedup').checked;
+            const strength = document.getElementById('strengthLevel').value;
+
+            if (selectedStickers.length === 0) {
+                const confirm = window.confirm('您还没有选择任何贴纸,是否继续?');
+                if (!confirm) return;
+            }
+
+            // 显示进度
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultSection').style.display = 'none';
+
+            processedVersions = [];
+            md5Records = [];
+
+            const totalTasks = uploadedImages.length * versionCount;
+            let completedTasks = 0;
+
+            showProgressStatus('⏳ 开始生成装饰版本...', 'info');
+
+            const config = themeConfigs[currentTheme];
+
+            // 生成每个版本
+            for (let v = 0; v < versionCount; v++) {
+                const versionImages = [];
+
+                for (let i = 0; i < uploadedImages.length; i++) {
+                    const originalImage = uploadedImages[i];
+
+                    const decorationConfig = {
+                        borderStyle: borderStyle,
+                        borderWidth: borderWidth + Math.floor(Math.random() * 10),
+                        borderRadius: borderRadius,
+                        borderColor: config.borderColors[v % config.borderColors.length],
+                        stickers: selectedStickers,
+                        emojis: enableEmojis ? config.emojis : [],
+                        enableArrows: enableArrows,
+                        enableCircles: enableCircles
+                    };
+
+                    const processedImage = await processImageWithDecoration(
+                        originalImage,
+                        v,
+                        decorationConfig,
+                        enableTechDedup,
+                        strength
+                    );
+
+                    versionImages.push(processedImage);
+
+                    const md5 = await calculateMD5(processedImage.blob);
+                    md5Records.push({
+                        imageName: originalImage.name,
+                        version: v + 1,
+                        md5: md5
+                    });
+
+                    completedTasks++;
+                    const progress = Math.round((completedTasks / totalTasks) * 100);
+                    updateProgress(progress);
+                    showProgressStatus(`正在处理: 版本${v + 1} - ${originalImage.name}`, 'info');
+                }
+
+                processedVersions.push({
+                    version: v + 1,
+                    images: versionImages
+                });
+            }
+
+            showProgressStatus('✅ 所有版本生成完成!', 'success');
+            displayResults();
+        }
+
+        // 处理图片并添加装饰
+        async function processImageWithDecoration(originalImage, versionIndex, decorationConfig, enableTechDedup, strength) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const borderW = decorationConfig.borderWidth;
+                    const newWidth = img.width + borderW * 2;
+                    const newHeight = img.height + borderW * 2;
+
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    const ctx = canvas.getContext('2d');
+
+                    // 1. 绘制边框背景
+                    drawBorderBackground(ctx, newWidth, newHeight, decorationConfig);
+
+                    // 2. 绘制原图
+                    if (decorationConfig.borderRadius > 0) {
+                        ctx.save();
+                        roundRect(ctx, borderW, borderW, img.width, img.height, decorationConfig.borderRadius);
+                        ctx.clip();
+                    }
+                    ctx.drawImage(img, borderW, borderW, img.width, img.height);
+                    if (decorationConfig.borderRadius > 0) {
+                        ctx.restore();
+                    }
+
+                    // 3. 绘制手绘边框装饰
+                    drawBorderDecoration(ctx, newWidth, newHeight, borderW, decorationConfig);
+
+                    // 4. 添加文字贴纸
+                    if (decorationConfig.stickers.length > 0) {
+                        addTextStickers(ctx, newWidth, newHeight, decorationConfig.stickers, versionIndex);
+                    }
+
+                    // 5. 添加emoji装饰
+                    if (decorationConfig.emojis.length > 0) {
+                        addEmojiDecorations(ctx, newWidth, newHeight, decorationConfig.emojis, versionIndex);
+                    }
+
+                    // 6. 添加手绘元素
+                    if (decorationConfig.enableArrows) {
+                        drawHandDrawnArrows(ctx, newWidth, newHeight, versionIndex);
+                    }
+                    if (decorationConfig.enableCircles) {
+                        drawHandDrawnCircles(ctx, newWidth, newHeight, versionIndex);
+                    }
+
+                    // 7. 技术去重
+                    if (enableTechDedup) {
+                        applyTechnicalDeduplication(ctx, canvas, strength, versionIndex);
+                    }
+
+                    // 转换为Blob
+                    const quality = 0.92 + Math.random() * 0.06;
+                    canvas.toBlob((blob) => {
+                        resolve({
+                            name: originalImage.name,
+                            blob: blob
+                        });
+                    }, 'image/jpeg', quality);
+                };
+                img.src = originalImage.dataUrl;
+            });
+        }
+
+        // 绘制边框背景
+        function drawBorderBackground(ctx, width, height, config) {
+            const style = config.borderStyle;
+            const color = config.borderColor;
+
+            if (style === 'solid') {
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, width, height);
+            } else if (style === 'gradient') {
+                const gradient = ctx.createLinearGradient(0, 0, 0, height);
+                gradient.addColorStop(0, color);
+                gradient.addColorStop(1, adjustColorBrightness(color, -20));
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+            } else if (style === 'notebook') {
+                ctx.fillStyle = '#FFF8DC';
+                ctx.fillRect(0, 0, width, height);
+                // 螺旋线
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 5;
+                for (let y = 50; y < height; y += 30) {
+                    ctx.beginPath();
+                    ctx.arc(15, y, 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                // 横线
+                ctx.strokeStyle = '#DEB887';
+                ctx.lineWidth = 1;
+                for (let y = 80; y < height; y += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(40, y);
+                    ctx.lineTo(width - 20, y);
+                    ctx.stroke();
+                }
+            } else {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, width, height);
+            }
+        }
+
+        // 绘制边框装饰
+        function drawBorderDecoration(ctx, width, height, borderW, config) {
+            ctx.strokeStyle = config.borderColor;
+            ctx.lineWidth = 3;
+
+            if (config.borderStyle === 'wavy') {
+                // 手绘波浪边框
+                drawWavyBorder(ctx, borderW, borderW, width - borderW, height - borderW);
+            } else if (config.borderStyle === 'dashed') {
+                // 虚线边框
+                ctx.setLineDash([10, 5]);
+                ctx.strokeRect(borderW + 5, borderW + 5, width - borderW * 2 - 10, height - borderW * 2 - 10);
+                ctx.setLineDash([]);
+            } else if (config.borderStyle === 'decorated') {
+                // 装饰边框 (四角爱心)
+                const positions = [
+                    {x: borderW + 10, y: borderW + 10},
+                    {x: width - borderW - 10, y: borderW + 10},
+                    {x: borderW + 10, y: height - borderW - 10},
+                    {x: width - borderW - 10, y: height - borderW - 10}
+                ];
+                ctx.font = '30px Arial';
+                ctx.fillStyle = config.borderColor;
+                positions.forEach(pos => {
+                    ctx.fillText('💖', pos.x, pos.y);
+                });
+            }
+        }
+
+        // 绘制波浪边框
+        function drawWavyBorder(ctx, x, y, width, height) {
+            const amplitude = 5;
+            const frequency = 0.05;
+
+            ctx.beginPath();
+
+            // 上边
+            for (let i = 0; i <= width; i += 2) {
+                const wave = Math.sin(i * frequency) * amplitude + (Math.random() - 0.5) * 2;
+                if (i === 0) {
+                    ctx.moveTo(x + i, y + wave);
+                } else {
+                    ctx.lineTo(x + i, y + wave);
+                }
+            }
+
+            // 右边
+            for (let i = 0; i <= height; i += 2) {
+                const wave = Math.sin(i * frequency) * amplitude + (Math.random() - 0.5) * 2;
+                ctx.lineTo(width + wave, y + i);
+            }
+
+            // 下边
+            for (let i = width; i >= 0; i -= 2) {
+                const wave = Math.sin(i * frequency) * amplitude + (Math.random() - 0.5) * 2;
+                ctx.lineTo(x + i, height + wave);
+            }
+
+            // 左边
+            for (let i = height; i >= 0; i -= 2) {
+                const wave = Math.sin(i * frequency) * amplitude + (Math.random() - 0.5) * 2;
+                ctx.lineTo(x + wave, y + i);
+            }
+
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // 添加文字贴纸
+        function addTextStickers(ctx, width, height, stickers, versionIndex) {
+            const positions = [
+                {x: 50, y: 50},
+                {x: width - 150, y: 50},
+                {x: 50, y: height - 50},
+                {x: width - 150, y: height - 50},
+                {x: width / 2 - 75, y: 50}
+            ];
+
+            const colors = ['#FFD700', '#FF69B4', '#87CEEB', '#98FB98', '#DDA0DD', '#FFA07A'];
+
+            stickers.slice(0, 5).forEach((text, index) => {
+                const pos = positions[index];
+                const bgColor = colors[(index + versionIndex) % colors.length];
+
+                drawTextSticker(ctx, text, pos.x, pos.y, bgColor);
+            });
+        }
+
+        // 绘制单个文字贴纸
+        function drawTextSticker(ctx, text, x, y, bgColor) {
+            ctx.font = 'bold 18px Microsoft YaHei';
+            const metrics = ctx.measureText(text);
+            const textWidth = metrics.width;
+            const padding = 12;
+            const stickerWidth = textWidth + padding * 2;
+            const stickerHeight = 35;
+
+            // 绘制背景
+            ctx.fillStyle = bgColor;
+            ctx.beginPath();
+            ctx.roundRect(x, y, stickerWidth, stickerHeight, 15);
+            ctx.fill();
+
+            // 绘制文字
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x + stickerWidth / 2, y + stickerHeight / 2);
+
+            // 重置对齐方式
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        // 添加emoji装饰
+        function addEmojiDecorations(ctx, width, height, emojis, versionIndex) {
+            const positions = [
+                {x: width - 60, y: height - 60},
+                {x: 30, y: height / 2},
+                {x: width - 60, y: height / 2},
+                {x: width / 2, y: height - 60}
+            ];
+
+            ctx.font = '35px Arial';
+            positions.slice(0, 3).forEach((pos, index) => {
+                const emoji = emojis[(index + versionIndex) % emojis.length];
+                const randomOffsetX = (Math.random() - 0.5) * 20;
+                const randomOffsetY = (Math.random() - 0.5) * 20;
+                ctx.fillText(emoji, pos.x + randomOffsetX, pos.y + randomOffsetY);
+            });
+        }
+
+        // 绘制手绘箭头
+        function drawHandDrawnArrows(ctx, width, height, versionIndex) {
+            if (versionIndex % 2 !== 0) return; // 每隔一个版本绘制
+
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+
+            const startX = width * 0.7;
+            const startY = height * 0.3;
+            const endX = width * 0.85;
+            const endY = height * 0.4;
+
+            // 绘制箭头主体 (手绘曲线)
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            const cp1x = startX + (endX - startX) * 0.3 + (Math.random() - 0.5) * 10;
+            const cp1y = startY + (endY - startY) * 0.3 + (Math.random() - 0.5) * 10;
+            const cp2x = startX + (endX - startX) * 0.7 + (Math.random() - 0.5) * 10;
+            const cp2y = startY + (endY - startY) * 0.7 + (Math.random() - 0.5) * 10;
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+            ctx.stroke();
+
+            // 绘制箭头头部
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - 10, endY - 8);
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - 10, endY + 8);
+            ctx.stroke();
+        }
+
+        // 绘制手绘圆圈
+        function drawHandDrawnCircles(ctx, width, height, versionIndex) {
+            if (versionIndex % 3 !== 0) return;
+
+            ctx.strokeStyle = '#4A90E2';
+            ctx.lineWidth = 2;
+
+            const centerX = width * 0.2;
+            const centerY = height * 0.7;
+            const radius = 40;
+
+            // 手绘圆圈效果
+            ctx.beginPath();
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.1) {
+                const r = radius + (Math.random() - 0.5) * 3;
+                const x = centerX + Math.cos(angle) * r;
+                const y = centerY + Math.sin(angle) * r;
+                if (angle === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // 应用技术去重
+        function applyTechnicalDeduplication(ctx, canvas, strength, versionIndex) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            let pixelShift = strength === 'light' ? 1 : strength === 'medium' ? 2 : 3;
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (Math.random() < 0.25) {
+                    const shift = Math.floor(Math.random() * (pixelShift * 2 + 1)) - pixelShift;
+                    data[i] = Math.max(0, Math.min(255, data[i] + shift));
+                    data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + shift));
+                    data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + shift));
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // 添加不可见水印
+            const timestamp = new Date().getTime() + versionIndex + Math.random();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.002)';
+            ctx.font = '1px Arial';
+            ctx.fillText(timestamp.toString(), 0, canvas.height - 1);
+        }
+
+        // 圆角矩形
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        // 调整颜色亮度
+        function adjustColorBrightness(color, amount) {
+            const hex = color.replace('#', '');
+            const r = Math.max(0, Math.min(255, parseInt(hex.substring(0, 2), 16) + amount));
+            const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) + amount));
+            const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) + amount));
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        }
+
+        // 计算MD5
+        async function calculateMD5(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const spark = new SparkMD5.ArrayBuffer();
+                    spark.append(e.target.result);
+                    resolve(spark.end());
+                };
+                reader.readAsArrayBuffer(blob);
+            });
+        }
+
+        // 更新进度
+        function updateProgress(percent) {
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+        }
+
+        // 显示进度状态
+        function showProgressStatus(message, type) {
+            showStatus('progressStatus', message, type);
+        }
+
+        // 显示结果
+        function displayResults() {
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+
+            document.getElementById('totalVersions').textContent = processedVersions.length;
+            document.getElementById('totalImages').textContent = uploadedImages.length;
+
+            const container = document.getElementById('md5Container');
+            container.innerHTML = '';
+
+            uploadedImages.forEach(img => {
+                const table = document.createElement('table');
+                table.className = 'md5-table';
+
+                let tableHTML = `
+                    <thead>
+                        <tr><th colspan="2">${img.name}</th></tr>
+                        <tr><th>版本</th><th>MD5值</th></tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                processedVersions.forEach(version => {
+                    const record = md5Records.find(r =>
+                        r.imageName === img.name && r.version === version.version
+                    );
+                    if (record) {
+                        tableHTML += `
+                            <tr>
+                                <td>版本 ${version.version}</td>
+                                <td>${record.md5}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                tableHTML += '</tbody>';
+                table.innerHTML = tableHTML;
+                container.appendChild(table);
+            });
+
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // 初始化下载
+        function initializeDownload() {
+            document.getElementById('downloadBtn').addEventListener('click', downloadAll);
+            document.getElementById('restartBtn').addEventListener('click', () => {
+                if (confirm('确定要重新开始吗?')) {
+                    location.reload();
+                }
+            });
+        }
+
+        // 下载所有版本
+        async function downloadAll() {
+            if (processedVersions.length === 0) {
+                alert('没有可下载的内容');
+                return;
+            }
+
+            showStatus('resultStatus', '⏳ 正在打包ZIP...', 'info');
+
+            const zip = new JSZip();
+
+            processedVersions.forEach(version => {
+                const folder = zip.folder(`版本${version.version}`);
+                version.images.forEach(img => {
+                    folder.file(img.name, img.blob);
+                });
+            });
+
+            let md5Text = '# MD5值记录\n\n';
+            uploadedImages.forEach(img => {
+                md5Text += `## ${img.name}\n`;
+                processedVersions.forEach(version => {
+                    const record = md5Records.find(r =>
+                        r.imageName === img.name && r.version === version.version
+                    );
+                    if (record) {
+                        md5Text += `版本${version.version}: ${record.md5}\n`;
+                    }
+                });
+                md5Text += '\n';
+            });
+
+            zip.file('MD5记录.txt', md5Text);
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `小红书图片_${themeConfigs[currentTheme].name}_${new Date().getTime()}.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showStatus('resultStatus', '✅ ZIP下载成功!', 'success');
+        }
+
+        // 显示状态
+        function showStatus(id, message, type) {
+            const el = document.getElementById(id);
+            el.textContent = message;
+            el.className = 'status-message' + (message ? ' show ' + type : '');
+        }
+
+        console.log('=== 初始化完成 ===');
+    </script>
+</body>
+</html>
